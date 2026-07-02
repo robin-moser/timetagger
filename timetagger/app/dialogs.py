@@ -3986,6 +3986,7 @@ class SettingsDialog(BaseDialog):
             "F": "Open search dialog",
             "T": "Select time range",
             "R": "Open report dialog",
+            ".": "Toggle decimal hours",
             "I": "Open the guide",
             "Backspace": "Unselect all tags",
         }
