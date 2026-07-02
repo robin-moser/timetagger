@@ -3182,7 +3182,7 @@ class ReportDialog(BaseDialog):
         total_duration = 0
         for group in group_list2:
             total_duration += group.duration
-        rows.append(["head", duration2str(total_duration), "Total", 0])
+        rows.append(["head", duration2str(total_duration), "Gesamt", 0])
 
         for group in group_list2:
             # Add row for total of this tag combi
@@ -3205,6 +3205,10 @@ class ReportDialog(BaseDialog):
                     if True:  # st2.endsWith(":00"):
                         st2 = st2[:-3]
                     duration = duration2str(record.duration)
+                    description = to_str(record.get("ds", ""))
+                    for tag in self._tags:
+                        description = description.replace(tag, '')
+                    description = ' '.join(filter(lambda x: x != '', description.split()))
                     rows.append(
                         [
                             "record",
@@ -3213,7 +3217,7 @@ class ReportDialog(BaseDialog):
                             dt.format_isodate(sd1),
                             st1,
                             st2,
-                            to_str(record.get("ds", "")),  # strip tabs and newlines
+                            description,
                             window.store.records.tags_from_record(record).join(" "),
                         ]
                     )
@@ -3327,7 +3331,7 @@ class ReportDialog(BaseDialog):
         rowheight = 6
         rowheight2 = rowheight / 2
         rowskip = 3
-        coloffsets = 15, 4, 17, 10, 10
+        coloffsets = 12, 4, 19, 11, 11
 
         # Get row data and divide in chunks. This is done so that we
         # can break pages earlier to avoid breaking chunks.
@@ -3341,14 +3345,17 @@ class ReportDialog(BaseDialog):
 
         # Initialize the document
         doc = window.jsPDF()
-        doc.setFont("Ubuntu-C")
+        font = "Helvetica"
+        doc.setFont(font,"")
+        console.log(doc.getFontList())
 
         # Draw preamble
-        doc.setFontSize(24)
-        doc.text("Time record report", margin, margin, {"baseline": "top"})
-        img = document.getElementById("ttlogo_bd")
-        doc.addImage(img, "PNG", width - margin - 30, margin, 30, 30)
-        # doc.setFontSize(12)
+        doc.setFontSize(18)
+        doc.setTextColor("#2A3B63")
+        doc.text("Zeiterfassung", margin, margin, {"baseline": "top"})
+        img = document.getElementById("robinmoser_logo")
+        doc.addImage(img, "PNG", width - margin - 60, margin, 60, 13.8)
+        # doc.setFontSize(12
         # doc.text(
         #     "TimeTagger",
         #     width - margin,
@@ -3359,16 +3366,20 @@ class ReportDialog(BaseDialog):
         tagname = self._tags.join(" ") if self._tags else "all"
         d1 = dt.format_isodate(self._t1_date)
         d2 = dt.format_isodate(self._t2_date)
-        doc.setFontSize(11)
-        doc.text("Tags:  ", margin + 20, margin + 15, {"align": "right"})
-        doc.text(tagname, margin + 20, margin + 15)
-        doc.text("From:  ", margin + 20, margin + 20, {"align": "right"})
-        doc.text(d1, margin + 20, margin + 20)
-        doc.text("Until:  ", margin + 20, margin + 25, {"align": "right"})
-        doc.text(d2, margin + 20, margin + 25)
+        doc.setFontSize(9)
+        # doc.text("Tags:  ", margin + 20, margin + 15, {"align": "right"})
+        # doc.text(tagname, margin + 20, margin + 15)
+        doc.text("Von:  ", margin + 12, margin + 20, {"align": "right"})
+        doc.setFont(font, "Bold")
+        doc.text(d1, margin + 12, margin + 20)
+        doc.setFont(font,"")
+        doc.text("Bis:  ", margin + 12, margin + 24, {"align": "right"})
+        doc.setFont(font, "Bold")
+        doc.text(d2, margin + 12, margin + 24)
+        doc.setFont(font,"")
 
         # Prepare drawing table
-        doc.setFontSize(10)
+        doc.setFontSize(9)
         left_middle = {"align": "left", "baseline": "middle"}
         right_middle = {"align": "right", "baseline": "middle"}
         y = margin + 35
@@ -3397,13 +3408,14 @@ class ReportDialog(BaseDialog):
 
                 if row[0] == "head":
                     if showrecords:
-                        doc.setFillColor("#ccc")
+                        doc.setFillColor("#D3D9EB")
                     else:
-                        doc.setFillColor("#f3f3f3" if rownr % 2 else "#eaeaea")
+                        doc.setFillColor("#FAFAFF" if rownr % 2 else "#EEEEF8")
                     doc.rect(margin, y, width - 2 * margin, rowheight, "F")
                     # Duration
                     doc.setTextColor("#000")
                     x = margin + coloffsets[0]
+                    doc.setFont(font, "Bold")
                     doc.text(row[1], x, y + rowheight2, right_middle)  # duration
                     # Tag names, add structure via color, no padding
                     basename, lastname = "", row[2]
@@ -3415,8 +3427,11 @@ class ReportDialog(BaseDialog):
                     doc.text(lastname, x, y + rowheight2, left_middle)
 
                 elif row[0] == "record":
-                    doc.setFillColor("#f3f3f3" if rownr % 2 else "#eaeaea")
+                    doc.setFillColor("#FAFAFF" if rownr % 2 else "#EBEBF5")
+                    doc.setFont(font, "Bold")
                     doc.rect(margin, y, width - 2 * margin, rowheight, "F")
+                    doc.setFont(font,"")
+
                     doc.setTextColor("#000")
                     # _, key, duration, sd1, st1, st2, ds, tagz = row
                     # The duration is right-aligned
@@ -3434,7 +3449,7 @@ class ReportDialog(BaseDialog):
                     min_x = x
                     max_x = width - margin
                     ds = row[6]
-                    if x + doc.getTextWidth(ds) <= max_x:
+                    if False: #x + doc.getTextWidth(ds) <= max_x:
                         doc.text(ds, x, y + rowheight2, left_middle)
                     else:
                         w_space = doc.getTextWidth(" ")
@@ -3443,10 +3458,37 @@ class ReportDialog(BaseDialog):
                             if x + w > max_x:  # need new line
                                 x = min_x
                                 y += rowheight
-                                doc.setFillColor("#f3f3f3" if rownr % 2 else "#eaeaea")
+                                doc.setFillColor("#FAFAFF" if rownr % 2 else "#EBEBF5")
                                 doc.rect(margin, y, width - 2 * margin, rowheight, "F")
                                 doc.setTextColor("#000")
-                            doc.text(word, x, y + rowheight2, left_middle)
+
+                            if word.startswith("#"):
+
+                                # strip the first character
+                                word = word[1:]
+
+                                doc.setFontSize(8)
+                                doc.setFont(font, "Bold")
+
+                                padding = 1.2  # adjust as needed
+                                tag_width = doc.getTextWidth(word) + 2 * padding
+                                tag_height = rowheight2 + 1
+                                w = doc.getTextWidth(word)
+
+                                doc.setFillColor("#D4D9EB")  # Tag background
+                                doc.roundedRect(x - padding, y + tag_height / 4, tag_width, tag_height, 1, 1, "F")
+
+                                # Draw tag text
+                                doc.setTextColor("#003366")  # Tag text color
+                                doc.text(word, x, y + rowheight2, left_middle)
+
+                                # Reset color for normal text
+                                doc.setTextColor("#000")
+                                doc.setFont(font, "")
+                                doc.setFontSize(9)
+                                x += padding * 2
+                            else:
+                                doc.text(word, x, y + rowheight2, left_middle)
                             x += w + w_space
                 else:
                     doc.setFillColor("#ffeeee")
