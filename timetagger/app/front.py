@@ -2877,9 +2877,7 @@ class RecordsWidget(Widget):
         t = t1 + (y - y1) * nsecs / npixels
         tround = 1
         secspernpixels = 10 * nsecs / npixels
-        if secspernpixels > 100:
-            tround = 300  # 5 min
-        elif secspernpixels > 60:
+        if secspernpixels > 60:
             tround = 60  # 1 min
 
         def snap_t1(record):
