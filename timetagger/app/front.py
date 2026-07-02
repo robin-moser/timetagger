@@ -2743,6 +2743,39 @@ class RecordsWidget(Widget):
             self._selected_record = record, 0, self._canvas.now()
         self.update()
 
+    def _snap_new_record_endpoint(self, t0, t):
+        """Clamp the moving endpoint of a drag-new-record action to the nearest
+        existing record boundary so the new record cannot overlap existing ones.
+        """
+        PSCRIPT_OVERLOAD = False  # noqa
+
+        now = self._canvas.now()
+        if t0 < t:
+            # Dragging downward: do not cross into any record that extends below t0.
+            limit = None
+            for key in self._record_times.keys():
+                r1, r2 = self._record_times[key]
+                if r1 == r2:
+                    r2 = now
+                if r2 > t0:
+                    if limit is None or r1 < limit:
+                        limit = r1
+            if limit is not None and limit > t0:
+                t = min(t, limit)
+        elif t0 > t:
+            # Dragging upward: do not cross into any record that extends above t0.
+            limit = None
+            for key in self._record_times.keys():
+                r1, r2 = self._record_times[key]
+                if r1 == r2:
+                    r2 = now
+                if r1 < t0:
+                    if limit is None or r2 > limit:
+                        limit = r2
+            if limit is not None and limit < t0:
+                t = max(t, limit)
+        return t
+
     def on_pointer(self, ev):
         """Determine what kind of interaction mode we're in, and then dispatch
         to either navigation handling or record interaction handling.
@@ -2781,7 +2814,9 @@ class RecordsWidget(Widget):
                     pass  # Don't return, this can be the start of a normal drag
             elif "move" in ev.type:
                 if self._dragging_new_record[0] > 0:
-                    self._dragging_new_record[1] = t
+                    self._dragging_new_record[1] = self._snap_new_record_endpoint(
+                        self._dragging_new_record[0], t
+                    )
                     self.update()
                 return
             elif "up" in ev.type:
